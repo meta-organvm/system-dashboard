@@ -2,13 +2,10 @@
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from pathlib import Path
 
 from dashboard.data.loader import load_registry, load_metrics, organ_summary
 
 router = APIRouter(prefix="/omega", tags=["omega"])
-templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 
 def compute_omega_score(registry: dict, metrics: dict) -> list[dict]:
@@ -80,7 +77,7 @@ async def omega_page(request: Request):
     met_count = sum(1 for c in criteria if c["met"])
     total_count = len(criteria)
 
-    return templates.TemplateResponse("omega.html", {
+    return request.app.state.templates.TemplateResponse("omega.html", {
         "request": request,
         "page_title": "Omega Scorecard",
         "criteria": criteria,

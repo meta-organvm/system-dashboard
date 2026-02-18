@@ -2,14 +2,11 @@
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from pathlib import Path
 from collections import defaultdict
 
 from dashboard.data.loader import load_registry
 
 router = APIRouter(prefix="/graph", tags=["graph"])
-templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -32,7 +29,7 @@ async def graph_page(request: Request):
                 if from_org != to_org:
                     cross_organ[f"{from_org} → {to_org}"] += 1
 
-    return templates.TemplateResponse("graph.html", {
+    return request.app.state.templates.TemplateResponse("graph.html", {
         "request": request,
         "page_title": "Dependency Graph",
         "total_nodes": len(nodes),

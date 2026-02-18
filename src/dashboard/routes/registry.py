@@ -2,13 +2,10 @@
 
 from fastapi import APIRouter, Request, Query
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from pathlib import Path
 
 from dashboard.data.loader import load_registry
 
 router = APIRouter(prefix="/registry", tags=["registry"])
-templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -43,7 +40,7 @@ async def registry_page(
 
     organ_keys = sorted(organs.keys())
 
-    return templates.TemplateResponse("registry.html", {
+    return request.app.state.templates.TemplateResponse("registry.html", {
         "request": request,
         "page_title": "Registry Browser",
         "repos": repos,

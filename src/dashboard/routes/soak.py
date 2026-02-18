@@ -3,13 +3,10 @@
 from datetime import datetime, timezone
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from pathlib import Path
 
 from dashboard.data.loader import load_soak_snapshots
 
 router = APIRouter(prefix="/soak", tags=["soak"])
-templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 VIGILIA_START = datetime(2026, 2, 16, tzinfo=timezone.utc)
 VIGILIA_DAYS = 30
@@ -43,7 +40,7 @@ async def soak_page(request: Request):
     # Latest snapshot
     latest = snapshots[-1] if snapshots else {}
 
-    return templates.TemplateResponse("soak.html", {
+    return request.app.state.templates.TemplateResponse("soak.html", {
         "request": request,
         "page_title": "Soak Test (VIGILIA)",
         "elapsed": elapsed,

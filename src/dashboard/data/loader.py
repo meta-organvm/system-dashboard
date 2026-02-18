@@ -1,12 +1,13 @@
 """Load system data from the corpus repo and organvm-engine."""
 
 import json
+import os
 from pathlib import Path
-from functools import lru_cache
 
-CORPUS_DIR = (
-    Path.home() / "Workspace" / "meta-organvm" / "organvm-corpvs-testamentvm"
-)
+CORPUS_DIR = Path(os.environ.get(
+    "ORGANVM_CORPUS_DIR",
+    str(Path.home() / "Workspace" / "meta-organvm" / "organvm-corpvs-testamentvm"),
+))
 
 
 def _load_json(path: Path) -> dict:

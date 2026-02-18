@@ -2,13 +2,10 @@
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
-from pathlib import Path
 
 from dashboard.data.loader import load_registry, load_metrics, organ_summary
 
 router = APIRouter(prefix="/health", tags=["health"])
-templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent.parent / "templates"))
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -20,7 +17,7 @@ async def health_page(request: Request):
     computed = metrics.get("computed", {})
     manual = metrics.get("manual", {})
 
-    return templates.TemplateResponse("health.html", {
+    return request.app.state.templates.TemplateResponse("health.html", {
         "request": request,
         "page_title": "System Health",
         "organs": organs,
