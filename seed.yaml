@@ -1,0 +1,31 @@
+schema_version: "1.0"
+organ: Meta
+repo: system-dashboard
+org: meta-organvm
+
+metadata:
+  description: "Live system health dashboard for the eight-organ organvm system"
+  language: python
+  ci_workflow: ci.yml
+  tier: standard
+  implementation_status: PRODUCTION
+
+agents: []
+
+produces:
+  - type: dashboard-view
+    description: "Web-based system health visualization"
+
+consumes:
+  - type: registry-data
+    source: organvm-corpvs-testamentvm
+  - type: soak-test-data
+    source: organvm-corpvs-testamentvm
+  - type: system-metrics
+    source: organvm-corpvs-testamentvm
+
+subscriptions:
+  - event: registry.updated
+    action: refresh-cache
+  - event: soak.snapshot-collected
+    action: refresh-cache
