@@ -29,14 +29,17 @@ async def graph_page(request: Request):
                 if from_org != to_org:
                     cross_organ[f"{from_org} → {to_org}"] += 1
 
-    return request.app.state.templates.TemplateResponse("graph.html", {
-        "request": request,
-        "page_title": "Dependency Graph",
-        "total_nodes": len(nodes),
-        "total_edges": len(edges),
-        "edges": edges,
-        "cross_organ": dict(sorted(cross_organ.items())),
-    })
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="graph.html",
+        context={
+            "page_title": "Dependency Graph",
+            "total_nodes": len(nodes),
+            "total_edges": len(edges),
+            "edges": edges,
+            "cross_organ": dict(sorted(cross_organ.items())),
+        },
+    )
 
 
 @router.get("/api")

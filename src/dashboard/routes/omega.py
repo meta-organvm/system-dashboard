@@ -3,85 +3,69 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
-from dashboard.data.loader import load_registry, load_metrics, organ_summary
+from dashboard.data.loader import load_registry
 
 router = APIRouter(prefix="/omega", tags=["omega"])
 
 
-def compute_omega_score(registry: dict, metrics: dict) -> list[dict]:
-    """Compute Omega criteria scores."""
-    computed = metrics.get("computed", {})
-    organs = organ_summary(registry)
-    all_operational = all(o["status"] == "OPERATIONAL" for o in organs)
+def compute_omega_score(registry: dict) -> tuple[list[dict], dict]:
+    """Compute Omega criteria scores using the engine's omega module.
 
-    criteria = [
-        {
-            "id": "#1",
-            "name": "All 8 organs operational",
-            "met": all_operational,
-            "value": f"{sum(1 for o in organs if o['status'] == 'OPERATIONAL')}/8",
-        },
-        {
-            "id": "#2",
-            "name": "Registry validated",
-            "met": True,  # Passes if dashboard loads
-            "value": f"{computed.get('total_repos', 0)} repos",
-        },
-        {
-            "id": "#3",
-            "name": "Dependencies clean",
-            "met": True,  # Validated by engine
-            "value": f"{computed.get('dependency_edges', 0)} edges, 0 violations",
-        },
-        {
-            "id": "#4",
-            "name": "CI/CD across system",
-            "met": computed.get("ci_workflows", 0) > 50,
-            "value": f"{computed.get('ci_workflows', 0)} workflows",
-        },
-        {
-            "id": "#5",
-            "name": "Documentation complete",
-            "met": computed.get("total_repos", 0) > 80,
-            "value": f"{metrics.get('manual', {}).get('total_words_short', '?')} words",
-        },
-        {
-            "id": "#6",
-            "name": "Essays published",
-            "met": computed.get("published_essays", 0) >= 10,
-            "value": f"{computed.get('published_essays', 0)} essays",
-        },
-        {
-            "id": "#7",
-            "name": "POSSE distribution live",
-            "met": True,
-            "value": "Mastodon + Discord",
-        },
-        {
-            "id": "#8",
-            "name": "Soak test running",
-            "met": True,
-            "value": "VIGILIA active",
-        },
+    Returns:
+        (criteria_list, soak_info) where criteria_list has id/name/met/value
+        dicts and soak_info has streak/remaining/snapshots.
+    """
+    try:
+        from organvm_engine.omega.scorecard import evaluate
+        scorecard = evaluate(registry=registry)
+        criteria = [
+            {
+                "id": f"#{c.id}",
+                "name": c.name,
+                "met": c.status == "MET",
+                "in_progress": c.status == "IN_PROGRESS",
+                "value": c.value,
+            }
+            for c in scorecard.criteria
+        ]
+        soak_info = {
+            "streak": scorecard.soak.streak_days,
+            "remaining": scorecard.soak.days_remaining,
+            "target": scorecard.soak.target_days,
+            "snapshots": scorecard.soak.total_snapshots,
+            "incidents": scorecard.soak.critical_incidents,
+        }
+        return criteria, soak_info
+    except Exception:
+        # Fallback if engine omega module unavailable
+        return _fallback_criteria(registry), {}
+
+
+def _fallback_criteria(registry: dict) -> list[dict]:
+    """Minimal fallback if engine omega is unavailable."""
+    return [
+        {"id": "#1", "name": "30-day soak test passes", "met": False, "in_progress": True, "value": "Soak running"},
+        {"id": "#6", "name": "AI-conductor essay published", "met": True, "in_progress": False, "value": "Essay #9"},
     ]
-
-    return criteria
 
 
 @router.get("/", response_class=HTMLResponse)
 async def omega_page(request: Request):
     registry = load_registry()
-    metrics = load_metrics()
-    criteria = compute_omega_score(registry, metrics)
+    criteria, soak_info = compute_omega_score(registry)
 
     met_count = sum(1 for c in criteria if c["met"])
     total_count = len(criteria)
 
-    return request.app.state.templates.TemplateResponse("omega.html", {
-        "request": request,
-        "page_title": "Omega Scorecard",
-        "criteria": criteria,
-        "met": met_count,
-        "total": total_count,
-        "pct": int(met_count / total_count * 100) if total_count else 0,
-    })
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="omega.html",
+        context={
+            "page_title": "Omega Scorecard",
+            "criteria": criteria,
+            "met": met_count,
+            "total": total_count,
+            "pct": int(met_count / total_count * 100) if total_count else 0,
+            "soak": soak_info,
+        },
+    )

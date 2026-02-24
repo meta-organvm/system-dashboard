@@ -40,13 +40,16 @@ async def soak_page(request: Request):
     # Latest snapshot
     latest = snapshots[-1] if snapshots else {}
 
-    return request.app.state.templates.TemplateResponse("soak.html", {
-        "request": request,
-        "page_title": "Soak Test (VIGILIA)",
-        "elapsed": elapsed,
-        "remaining": remaining,
-        "pct": pct,
-        "total_snapshots": len(snapshots),
-        "ci_trend": ci_trend,
-        "latest": latest,
-    })
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="soak.html",
+        context={
+            "page_title": "Soak Test (VIGILIA)",
+            "elapsed": elapsed,
+            "remaining": remaining,
+            "pct": pct,
+            "total_snapshots": len(snapshots),
+            "ci_trend": ci_trend,
+            "latest": latest,
+        },
+    )

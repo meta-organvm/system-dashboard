@@ -17,19 +17,22 @@ async def health_page(request: Request):
     computed = metrics.get("computed", {})
     manual = metrics.get("manual", {})
 
-    return request.app.state.templates.TemplateResponse("health.html", {
-        "request": request,
-        "page_title": "System Health",
-        "organs": organs,
-        "total_repos": computed.get("total_repos", 0),
-        "active_repos": computed.get("active_repos", 0),
-        "archived_repos": computed.get("archived_repos", 0),
-        "ci_workflows": computed.get("ci_workflows", 0),
-        "dep_edges": computed.get("dependency_edges", 0),
-        "essays": computed.get("published_essays", 0),
-        "sprints": computed.get("sprints_completed", 0),
-        "total_words": manual.get("total_words_short", "?"),
-    })
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="health.html",
+        context={
+            "page_title": "System Health",
+            "organs": organs,
+            "total_repos": computed.get("total_repos", 0),
+            "active_repos": computed.get("active_repos", 0),
+            "archived_repos": computed.get("archived_repos", 0),
+            "ci_workflows": computed.get("ci_workflows", 0),
+            "dep_edges": computed.get("dependency_edges", 0),
+            "essays": computed.get("published_essays", 0),
+            "sprints": computed.get("sprints_completed", 0),
+            "total_words": manual.get("total_words_short", "?"),
+        },
+    )
 
 
 @router.get("/api")

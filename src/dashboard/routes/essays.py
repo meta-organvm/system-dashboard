@@ -12,9 +12,12 @@ router = APIRouter(prefix="/essays", tags=["essays"])
 async def essays_page(request: Request):
     essays = load_essays()
 
-    return request.app.state.templates.TemplateResponse("essays.html", {
-        "request": request,
-        "page_title": "Essays",
-        "essays": essays,
-        "total": len(essays),
-    })
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="essays.html",
+        context={
+            "page_title": "Essays",
+            "essays": essays,
+            "total": len(essays),
+        },
+    )

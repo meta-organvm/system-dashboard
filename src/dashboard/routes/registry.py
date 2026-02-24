@@ -40,16 +40,19 @@ async def registry_page(
 
     organ_keys = sorted(organs.keys())
 
-    return request.app.state.templates.TemplateResponse("registry.html", {
-        "request": request,
-        "page_title": "Registry Browser",
-        "repos": repos,
-        "total": len(repos),
-        "organ_keys": organ_keys,
-        "filter_organ": organ or "",
-        "filter_status": status or "",
-        "filter_tier": tier or "",
-    })
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="registry.html",
+        context={
+            "page_title": "Registry Browser",
+            "repos": repos,
+            "total": len(repos),
+            "organ_keys": organ_keys,
+            "filter_organ": organ or "",
+            "filter_status": status or "",
+            "filter_tier": tier or "",
+        },
+    )
 
 
 @router.get("/api/{repo_name}")
