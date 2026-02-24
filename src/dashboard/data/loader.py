@@ -1,13 +1,35 @@
 """Load system data from the corpus repo and organvm-engine."""
 
 import json
-import os
 from pathlib import Path
 
-CORPUS_DIR = Path(os.environ.get(
-    "ORGANVM_CORPUS_DIR",
-    str(Path.home() / "Workspace" / "meta-organvm" / "organvm-corpvs-testamentvm"),
-))
+from organvm_engine.paths import corpus_dir as _corpus_dir
+from organvm_engine.registry import loader as _reg_loader
+from organvm_engine.governance import rules as _gov_rules
+from organvm_engine.metrics import timeseries as _ts
+
+CORPUS_DIR = _corpus_dir()
+
+
+def load_registry() -> dict:
+    """Load registry-v2.json, returning empty dict on failure."""
+    try:
+        return _reg_loader.load_registry()
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def load_governance_rules() -> dict:
+    """Load governance-rules.json, returning empty dict on failure."""
+    try:
+        return _gov_rules.load_governance_rules()
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def load_soak_snapshots() -> list[dict]:
+    """Load all soak test snapshots sorted by date."""
+    return _ts.load_snapshots()
 
 
 def _load_json(path: Path) -> dict:
@@ -18,30 +40,9 @@ def _load_json(path: Path) -> dict:
         return json.load(f)
 
 
-def load_registry() -> dict:
-    """Load registry-v2.json."""
-    return _load_json(CORPUS_DIR / "registry-v2.json")
-
-
 def load_metrics() -> dict:
     """Load system-metrics.json."""
     return _load_json(CORPUS_DIR / "system-metrics.json")
-
-
-def load_governance_rules() -> dict:
-    """Load governance-rules.json."""
-    return _load_json(CORPUS_DIR / "governance-rules.json")
-
-
-def load_soak_snapshots() -> list[dict]:
-    """Load all soak test snapshots sorted by date."""
-    soak_dir = CORPUS_DIR / "data" / "soak-test"
-    if not soak_dir.is_dir():
-        return []
-    snapshots = []
-    for path in sorted(soak_dir.glob("daily-*.json")):
-        snapshots.append(_load_json(path))
-    return snapshots
 
 
 def load_essays() -> list[dict]:
