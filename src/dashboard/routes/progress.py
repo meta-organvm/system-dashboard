@@ -11,17 +11,28 @@ Routes:
     /progress/api/gates  — gate stats JSON
 """
 
+import os
+import time
 from collections import Counter, defaultdict
 from pathlib import Path
+from threading import Lock
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from dashboard.data.loader import load_registry
+from organvm_engine.paths import registry_path as _registry_path
 
 router = APIRouter(prefix="/progress", tags=["progress"])
 
 WORKSPACE = Path.home() / "Workspace"
+_PROGRESS_CACHE_TTL_SECONDS = int(os.environ.get("DASHBOARD_PROGRESS_CACHE_TTL_SECONDS", "30"))
+_PROGRESS_CACHE: dict[str, object] = {
+    "projects": None,
+    "loaded_at": 0.0,
+    "registry_mtime": None,
+}
+_PROGRESS_CACHE_LOCK = Lock()
 
 # ---------------------------------------------------------------------------
 # Inline evaluator (mirrors orchestration-start-here/scripts/lib/progress.py)
@@ -366,13 +377,57 @@ def evaluate_all_for_dashboard(registry: dict) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Cached project evaluation
+# ---------------------------------------------------------------------------
+
+def _get_registry_mtime() -> float | None:
+    path = _registry_path()
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return None
+
+
+def clear_progress_cache() -> None:
+    with _PROGRESS_CACHE_LOCK:
+        _PROGRESS_CACHE["projects"] = None
+        _PROGRESS_CACHE["loaded_at"] = 0.0
+        _PROGRESS_CACHE["registry_mtime"] = None
+
+
+def get_progress_projects() -> list[dict]:
+    now = time.monotonic()
+    current_mtime = _get_registry_mtime()
+
+    with _PROGRESS_CACHE_LOCK:
+        cached_projects = _PROGRESS_CACHE["projects"]
+        loaded_at = float(_PROGRESS_CACHE["loaded_at"])
+        cached_mtime = _PROGRESS_CACHE["registry_mtime"]
+        if (
+            isinstance(cached_projects, list)
+            and now - loaded_at < _PROGRESS_CACHE_TTL_SECONDS
+            and cached_mtime == current_mtime
+        ):
+            return cached_projects
+
+    registry = load_registry()
+    projects = evaluate_all_for_dashboard(registry)
+
+    with _PROGRESS_CACHE_LOCK:
+        _PROGRESS_CACHE["projects"] = projects
+        _PROGRESS_CACHE["loaded_at"] = now
+        _PROGRESS_CACHE["registry_mtime"] = current_mtime
+
+    return projects
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
 @router.get("/", response_class=HTMLResponse)
 async def progress_page(request: Request):
-    registry = load_registry()
-    projects = evaluate_all_for_dashboard(registry)
+    projects = get_progress_projects()
 
     organs: dict[str, list[dict]] = defaultdict(list)
     for p in projects:
@@ -440,8 +495,7 @@ async def progress_page(request: Request):
 
 @router.get("/repo/{repo_name}", response_class=HTMLResponse)
 async def progress_repo_detail(request: Request, repo_name: str):
-    registry = load_registry()
-    projects = evaluate_all_for_dashboard(registry)
+    projects = get_progress_projects()
     matches = [p for p in projects if p["repo"] == repo_name]
     if not matches:
         matches = [p for p in projects if repo_name.lower() in p["repo"].lower()]
@@ -459,8 +513,7 @@ async def progress_repo_detail(request: Request, repo_name: str):
 
 @router.get("/api")
 async def progress_api():
-    registry = load_registry()
-    projects = evaluate_all_for_dashboard(registry)
+    projects = get_progress_projects()
     return {
         "total": len(projects),
         "sys_pct": int(sum(p["pct"] for p in projects) / len(projects)) if projects else 0,
@@ -471,8 +524,7 @@ async def progress_api():
 
 @router.get("/api/repo/{repo_name}")
 async def progress_api_repo(repo_name: str):
-    registry = load_registry()
-    projects = evaluate_all_for_dashboard(registry)
+    projects = get_progress_projects()
     matches = [p for p in projects if p["repo"] == repo_name]
     if not matches:
         matches = [p for p in projects if repo_name.lower() in p["repo"].lower()]
@@ -483,8 +535,7 @@ async def progress_api_repo(repo_name: str):
 
 @router.get("/api/gates")
 async def progress_api_gates():
-    registry = load_registry()
-    projects = evaluate_all_for_dashboard(registry)
+    projects = get_progress_projects()
     stats = []
     for g in GATE_ORDER:
         applicable = [p for p in projects if any(x["name"] == g and x["applicable"] for x in p["gates"])]
@@ -501,8 +552,7 @@ async def progress_api_gates():
 
 @router.get("/api/blockers")
 async def progress_api_blockers():
-    registry = load_registry()
-    projects = evaluate_all_for_dashboard(registry)
+    projects = get_progress_projects()
     return {
         "ready": [{"repo": p["repo"], "organ": p["organ"], "promo": p["promo"], "next": p["next_promo"]}
                   for p in projects if p["promo_ready"] and p["promo"] != "GRADUATED"],
