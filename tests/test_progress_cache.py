@@ -1,78 +1,82 @@
-"""Tests for progress route cache behavior."""
+"""Tests for progress route cache behavior via organism cache."""
 
+from organvm_engine.metrics import organism as organism_mod
 from dashboard.routes import progress
 
 
-def test_progress_cache_hit_within_ttl(monkeypatch):
-    progress.clear_progress_cache()
+def test_organism_cache_hit_within_ttl(monkeypatch):
+    organism_mod.clear_organism_cache()
     calls = {"count": 0}
     clock = {"value": 100.0}
 
-    def fake_eval(registry):
+    original_compute = organism_mod.compute_organism
+
+    def tracking_compute(registry, **kwargs):
         calls["count"] += 1
-        return [{"repo": "alpha", "registry": registry.get("marker")}]
+        return original_compute(registry, **kwargs)
 
-    monkeypatch.setattr(progress, "_PROGRESS_CACHE_TTL_SECONDS", 30)
-    monkeypatch.setattr(progress, "_get_registry_mtime", lambda: 123.0)
-    monkeypatch.setattr(progress, "load_registry", lambda: {"marker": "r1"})
-    monkeypatch.setattr(progress, "evaluate_all_for_dashboard", fake_eval)
-    monkeypatch.setattr(progress.time, "monotonic", lambda: clock["value"])
+    monkeypatch.setattr(organism_mod, "compute_organism", tracking_compute)
+    monkeypatch.setattr(organism_mod, "_get_registry_mtime", lambda: 123.0)
+    monkeypatch.setattr(organism_mod.time, "monotonic", lambda: clock["value"])
+    monkeypatch.setattr(progress, "load_registry", lambda: {"organs": {}})
 
-    first = progress.get_progress_projects()
+    first = progress._get_organism()
     clock["value"] = 110.0
-    second = progress.get_progress_projects()
+    second = progress._get_organism()
 
-    assert first == second
+    assert first is second
     assert calls["count"] == 1
 
 
-def test_progress_cache_expires_by_ttl(monkeypatch):
-    progress.clear_progress_cache()
+def test_organism_cache_expires_by_ttl(monkeypatch):
+    organism_mod.clear_organism_cache()
     calls = {"count": 0}
     clock = {"value": 10.0}
 
-    def fake_eval(_registry):
+    original_compute = organism_mod.compute_organism
+
+    def tracking_compute(registry, **kwargs):
         calls["count"] += 1
-        return [{"repo": f"pass-{calls['count']}"}]
+        return original_compute(registry, **kwargs)
 
-    monkeypatch.setattr(progress, "_PROGRESS_CACHE_TTL_SECONDS", 5)
-    monkeypatch.setattr(progress, "_get_registry_mtime", lambda: 456.0)
-    monkeypatch.setattr(progress, "load_registry", lambda: {})
-    monkeypatch.setattr(progress, "evaluate_all_for_dashboard", fake_eval)
-    monkeypatch.setattr(progress.time, "monotonic", lambda: clock["value"])
+    monkeypatch.setattr(organism_mod, "compute_organism", tracking_compute)
+    monkeypatch.setattr(organism_mod, "_get_registry_mtime", lambda: 456.0)
+    monkeypatch.setattr(organism_mod.time, "monotonic", lambda: clock["value"])
+    monkeypatch.setattr(progress, "load_registry", lambda: {"organs": {}})
 
-    first = progress.get_progress_projects()
-    clock["value"] = 20.0
-    second = progress.get_progress_projects()
+    first = progress._get_organism()
+    clock["value"] = 50.0  # >30s TTL
+    second = progress._get_organism()
 
-    assert first != second
+    assert first is not second
     assert calls["count"] == 2
 
 
-def test_progress_cache_invalidates_on_registry_mtime_change(monkeypatch):
-    progress.clear_progress_cache()
+def test_organism_cache_invalidates_on_registry_mtime_change(monkeypatch):
+    organism_mod.clear_organism_cache()
     calls = {"count": 0}
     clock = {"value": 200.0}
     mtimes = [100.0, 100.0, 200.0]
 
     def fake_mtime():
-        return mtimes.pop(0)
+        return mtimes.pop(0) if mtimes else 200.0
 
-    def fake_eval(_registry):
+    original_compute = organism_mod.compute_organism
+
+    def tracking_compute(registry, **kwargs):
         calls["count"] += 1
-        return [{"repo": f"snapshot-{calls['count']}"}]
+        return original_compute(registry, **kwargs)
 
-    monkeypatch.setattr(progress, "_PROGRESS_CACHE_TTL_SECONDS", 60)
-    monkeypatch.setattr(progress, "_get_registry_mtime", fake_mtime)
-    monkeypatch.setattr(progress, "load_registry", lambda: {})
-    monkeypatch.setattr(progress, "evaluate_all_for_dashboard", fake_eval)
-    monkeypatch.setattr(progress.time, "monotonic", lambda: clock["value"])
+    monkeypatch.setattr(organism_mod, "compute_organism", tracking_compute)
+    monkeypatch.setattr(organism_mod, "_get_registry_mtime", fake_mtime)
+    monkeypatch.setattr(organism_mod.time, "monotonic", lambda: clock["value"])
+    monkeypatch.setattr(progress, "load_registry", lambda: {"organs": {}})
 
-    first = progress.get_progress_projects()
-    second = progress.get_progress_projects()
+    first = progress._get_organism()
+    second = progress._get_organism()
     clock["value"] = 205.0
-    third = progress.get_progress_projects()
+    third = progress._get_organism()
 
-    assert first == second
-    assert third != second
+    assert first is second
+    assert third is not second
     assert calls["count"] == 2
