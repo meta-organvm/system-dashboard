@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from dashboard.routes import health, registry, graph, soak, essays, omega, progress
+from dashboard.routes import health, registry, graph, soak, essays, omega, progress, atoms
 
 APP_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = APP_DIR / "templates"
@@ -32,6 +32,7 @@ app.include_router(soak.router)
 app.include_router(essays.router)
 app.include_router(omega.router)
 app.include_router(progress.router)
+app.include_router(atoms.router)
 
 
 @app.get("/")

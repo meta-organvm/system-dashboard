@@ -75,6 +75,27 @@ class TestOmegaRoutes:
         assert "MET" in resp.text or "NOT MET" in resp.text
 
 
+class TestAtomsRoutes:
+    def test_atoms_page_loads(self, client):
+        resp = client.get("/atoms/")
+        assert resp.status_code == 200
+        assert "Atoms Pipeline" in resp.text
+
+    def test_atoms_api(self, client):
+        resp = client.get("/atoms/api")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "organs" in data
+        assert "rollups" in data
+
+    def test_atoms_page_no_data(self, client):
+        """Graceful when no rollups exist."""
+        resp = client.get("/atoms/")
+        assert resp.status_code == 200
+        # Should still render the page structure
+        assert "Pipeline Health" in resp.text
+
+
 class TestRootRedirect:
     def test_root_redirects(self, client):
         resp = client.get("/", follow_redirects=False)

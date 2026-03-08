@@ -65,6 +65,27 @@ def load_essays() -> list[dict]:
     return essays
 
 
+def load_atom_rollups() -> dict[str, dict]:
+    """Load all per-organ atom rollup JSON files from workspace.
+
+    Returns dict mapping organ key → rollup data.
+    """
+    from organvm_engine.paths import workspace_root
+    from organvm_engine.organ_config import ORGANS
+
+    rollups: dict[str, dict] = {}
+    ws = workspace_root()
+    for key, info in ORGANS.items():
+        rollup_path = ws / info["dir"] / ".atoms" / "organ-rollup.json"
+        if rollup_path.exists():
+            try:
+                with open(rollup_path) as f:
+                    rollups[key] = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                pass
+    return rollups
+
+
 def organ_summary(registry: dict) -> list[dict]:
     """Build per-organ summary for display."""
     organs = registry.get("organs", {})
