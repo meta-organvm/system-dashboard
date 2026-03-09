@@ -10,7 +10,7 @@ router = APIRouter(prefix="/essays", tags=["essays"])
 
 @router.get("/", response_class=HTMLResponse)
 async def essays_page(request: Request):
-    essays = load_essays()
+    essays = load_essays(request.app.state.path_config)
 
     return request.app.state.templates.TemplateResponse(
         request,

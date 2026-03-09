@@ -15,7 +15,7 @@ async def registry_page(
     status: str | None = Query(None),
     tier: str | None = Query(None),
 ):
-    registry = load_registry()
+    registry = load_registry(request.app.state.path_config)
     organs = registry.get("organs", {})
 
     repos = []
@@ -56,9 +56,9 @@ async def registry_page(
 
 
 @router.get("/api/{repo_name}")
-async def registry_repo_api(repo_name: str):
+async def registry_repo_api(request: Request, repo_name: str):
     """Get single repo details as JSON."""
-    registry = load_registry()
+    registry = load_registry(request.app.state.path_config)
     for organ_key, organ_data in registry.get("organs", {}).items():
         for repo in organ_data.get("repositories", []):
             if repo.get("name") == repo_name:

@@ -14,8 +14,6 @@ All computation is delegated to organvm_engine.metrics (gates, organism, views).
 This module only handles routing and template rendering.
 """
 
-from pathlib import Path
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
@@ -31,13 +29,14 @@ from organvm_engine.metrics.views import (
 
 router = APIRouter(prefix="/progress", tags=["progress"])
 
-WORKSPACE = Path.home() / "Workspace"
-
-
-def _get_organism():
+def _get_organism(workspace, registry, registry_file):
     """Get the cached SystemOrganism, loading registry if needed."""
-    registry = load_registry()
-    return get_organism(registry=registry, workspace=WORKSPACE, ttl=30)
+    return get_organism(
+        registry=registry,
+        workspace=workspace,
+        ttl=30,
+        registry_file=registry_file,
+    )
 
 
 def clear_progress_cache() -> None:
@@ -51,7 +50,13 @@ def clear_progress_cache() -> None:
 
 @router.get("/", response_class=HTMLResponse)
 async def progress_page(request: Request):
-    organism = _get_organism()
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    organism = _get_organism(
+        config.workspace_root(),
+        registry,
+        config.registry_path(),
+    )
 
     organ_summaries = []
     for o in organism.organs:
@@ -92,7 +97,13 @@ async def progress_page(request: Request):
 
 @router.get("/repo/{repo_name}", response_class=HTMLResponse)
 async def progress_repo_detail(request: Request, repo_name: str):
-    organism = _get_organism()
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    organism = _get_organism(
+        config.workspace_root(),
+        registry,
+        config.registry_path(),
+    )
     repo = organism.find_repo(repo_name)
     if not repo:
         # Fuzzy match
@@ -119,24 +130,48 @@ async def progress_repo_detail(request: Request, repo_name: str):
 
 
 @router.get("/api")
-async def progress_api():
-    organism = _get_organism()
+async def progress_api(request: Request):
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    organism = _get_organism(
+        config.workspace_root(),
+        registry,
+        config.registry_path(),
+    )
     return project_progress_api(organism)
 
 
 @router.get("/api/repo/{repo_name}")
-async def progress_api_repo(repo_name: str):
-    organism = _get_organism()
+async def progress_api_repo(request: Request, repo_name: str):
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    organism = _get_organism(
+        config.workspace_root(),
+        registry,
+        config.registry_path(),
+    )
     return project_organism_cli(organism, repo=repo_name)
 
 
 @router.get("/api/gates")
-async def progress_api_gates():
-    organism = _get_organism()
+async def progress_api_gates(request: Request):
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    organism = _get_organism(
+        config.workspace_root(),
+        registry,
+        config.registry_path(),
+    )
     return project_gate_stats(organism)
 
 
 @router.get("/api/blockers")
-async def progress_api_blockers():
-    organism = _get_organism()
+async def progress_api_blockers(request: Request):
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    organism = _get_organism(
+        config.workspace_root(),
+        registry,
+        config.registry_path(),
+    )
     return project_blockers(organism)

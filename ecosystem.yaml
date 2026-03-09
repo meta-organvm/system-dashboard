@@ -1,0 +1,9 @@
+schema_version: '1.0'
+repo: system-dashboard
+organ: META
+display_name: "Live system health dashboard \u2014 FastAPI + Jinja2 + HTMX with brutalist\
+  \ CMYK design. 6 pages: health overview, registry browser, dependency graph, soak\
+  \ test monitoring, essay feed, omega scorecard."
+delivery:
+- platform: web_app
+  status: not_started

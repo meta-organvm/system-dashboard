@@ -14,7 +14,7 @@ VIGILIA_DAYS = 30
 
 @router.get("/", response_class=HTMLResponse)
 async def soak_page(request: Request):
-    snapshots = load_soak_snapshots()
+    snapshots = load_soak_snapshots(request.app.state.path_config)
 
     # VIGILIA timer
     now = datetime.now(timezone.utc)

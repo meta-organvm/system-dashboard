@@ -3,6 +3,8 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from organvm_engine.paths import PathConfig
+
 from dashboard.data.loader import load_atom_rollups
 
 router = APIRouter(prefix="/atoms", tags=["atoms"])
@@ -10,7 +12,8 @@ router = APIRouter(prefix="/atoms", tags=["atoms"])
 
 @router.get("/", response_class=HTMLResponse)
 async def atoms_page(request: Request):
-    rollups = load_atom_rollups()
+    config = request.app.state.path_config
+    rollups = load_atom_rollups(config)
 
     # Build per-organ summary rows
     organs = []
@@ -62,7 +65,7 @@ async def atoms_page(request: Request):
     top_fps = sorted(all_fingerprints.items(), key=lambda x: -x[1])[:15]
 
     # Load pipeline manifest for health info
-    manifest = _load_manifest()
+    manifest = _load_manifest(config)
 
     return request.app.state.templates.TemplateResponse(
         request,
@@ -82,10 +85,11 @@ async def atoms_page(request: Request):
 
 
 @router.get("/api")
-async def atoms_api():
+async def atoms_api(request: Request):
     """JSON endpoint for atom rollup data."""
-    rollups = load_atom_rollups()
-    manifest = _load_manifest()
+    config = request.app.state.path_config
+    rollups = load_atom_rollups(config)
+    manifest = _load_manifest(config)
     return {
         "organs": len(rollups),
         "rollups": rollups,
@@ -93,12 +97,12 @@ async def atoms_api():
     }
 
 
-def _load_manifest() -> dict:
+def _load_manifest(config: PathConfig | None = None) -> dict:
     """Load pipeline-manifest.json if available."""
     import json
     try:
         from organvm_engine.paths import atoms_dir
-        path = atoms_dir() / "pipeline-manifest.json"
+        path = atoms_dir(config) / "pipeline-manifest.json"
         if path.exists():
             return json.loads(path.read_text(encoding="utf-8"))
     except Exception:

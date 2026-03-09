@@ -96,6 +96,31 @@ class TestAtomsRoutes:
         assert "Pipeline Health" in resp.text
 
 
+class TestProgressRoutes:
+    def test_progress_page(self, client):
+        resp = client.get("/progress/")
+        assert resp.status_code == 200
+        assert "Progress" in resp.text
+
+    def test_progress_api(self, client):
+        resp = client.get("/progress/api")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, dict)
+
+    def test_progress_api_gates(self, client):
+        resp = client.get("/progress/api/gates")
+        assert resp.status_code == 200
+
+    def test_progress_api_blockers(self, client):
+        resp = client.get("/progress/api/blockers")
+        assert resp.status_code == 200
+
+    def test_progress_repo_not_found(self, client):
+        resp = client.get("/progress/repo/nonexistent-repo-xyz")
+        assert resp.status_code == 404
+
+
 class TestRootRedirect:
     def test_root_redirects(self, client):
         resp = client.get("/", follow_redirects=False)

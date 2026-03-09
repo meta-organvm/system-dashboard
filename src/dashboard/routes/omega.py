@@ -3,12 +3,17 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
+from organvm_engine.paths import PathConfig
+
 from dashboard.data.loader import load_registry
 
 router = APIRouter(prefix="/omega", tags=["omega"])
 
 
-def compute_omega_score(registry: dict) -> tuple[list[dict], dict]:
+def compute_omega_score(
+    registry: dict,
+    config: PathConfig | None = None,
+) -> tuple[list[dict], dict]:
     """Compute Omega criteria scores using the engine's omega module.
 
     Returns:
@@ -17,7 +22,8 @@ def compute_omega_score(registry: dict) -> tuple[list[dict], dict]:
     """
     try:
         from organvm_engine.omega.scorecard import evaluate
-        scorecard = evaluate(registry=registry)
+        soak_dir = config.soak_dir() if config is not None else None
+        scorecard = evaluate(registry=registry, soak_dir=soak_dir)
         criteria = [
             {
                 "id": f"#{c.id}",
@@ -51,8 +57,9 @@ def _fallback_criteria(registry: dict) -> list[dict]:
 
 @router.get("/", response_class=HTMLResponse)
 async def omega_page(request: Request):
-    registry = load_registry()
-    criteria, soak_info = compute_omega_score(registry)
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    criteria, soak_info = compute_omega_score(registry, config)
 
     met_count = sum(1 for c in criteria if c["met"])
     total_count = len(criteria)

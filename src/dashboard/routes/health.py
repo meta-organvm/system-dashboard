@@ -10,8 +10,9 @@ router = APIRouter(prefix="/health", tags=["health"])
 
 @router.get("/", response_class=HTMLResponse)
 async def health_page(request: Request):
-    registry = load_registry()
-    metrics = load_metrics()
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    metrics = load_metrics(config)
     organs = organ_summary(registry)
 
     computed = metrics.get("computed", {})
@@ -36,10 +37,11 @@ async def health_page(request: Request):
 
 
 @router.get("/api")
-async def health_api():
+async def health_api(request: Request):
     """JSON health check endpoint."""
-    registry = load_registry()
-    metrics = load_metrics()
+    config = request.app.state.path_config
+    registry = load_registry(config)
+    metrics = load_metrics(config)
     organs = organ_summary(registry)
 
     all_operational = all(o["status"] == "OPERATIONAL" for o in organs)

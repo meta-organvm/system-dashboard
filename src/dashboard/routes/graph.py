@@ -11,7 +11,7 @@ router = APIRouter(prefix="/graph", tags=["graph"])
 
 @router.get("/", response_class=HTMLResponse)
 async def graph_page(request: Request):
-    registry = load_registry()
+    registry = load_registry(request.app.state.path_config)
     organs = registry.get("organs", {})
 
     edges = []
@@ -43,9 +43,9 @@ async def graph_page(request: Request):
 
 
 @router.get("/api")
-async def graph_api():
+async def graph_api(request: Request):
     """Graph data as JSON for visualization."""
-    registry = load_registry()
+    registry = load_registry(request.app.state.path_config)
     nodes = []
     edges = []
 

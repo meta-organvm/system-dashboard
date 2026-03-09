@@ -3,33 +3,34 @@
 import json
 from pathlib import Path
 
-from organvm_engine.paths import corpus_dir as _corpus_dir
+from organvm_engine.paths import PathConfig, resolve_path_config
 from organvm_engine.registry import loader as _reg_loader
 from organvm_engine.governance import rules as _gov_rules
 from organvm_engine.metrics import timeseries as _ts
 
-CORPUS_DIR = _corpus_dir()
 
-
-def load_registry() -> dict:
+def load_registry(config: PathConfig | None = None) -> dict:
     """Load registry-v2.json, returning empty dict on failure."""
+    cfg = resolve_path_config(config)
     try:
-        return _reg_loader.load_registry()
+        return _reg_loader.load_registry(cfg.registry_path())
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
-def load_governance_rules() -> dict:
+def load_governance_rules(config: PathConfig | None = None) -> dict:
     """Load governance-rules.json, returning empty dict on failure."""
+    cfg = resolve_path_config(config)
     try:
-        return _gov_rules.load_governance_rules()
+        return _gov_rules.load_governance_rules(cfg.governance_rules_path())
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
 
 
-def load_soak_snapshots() -> list[dict]:
+def load_soak_snapshots(config: PathConfig | None = None) -> list[dict]:
     """Load all soak test snapshots sorted by date."""
-    return _ts.load_snapshots()
+    cfg = resolve_path_config(config)
+    return _ts.load_snapshots(cfg.soak_dir())
 
 
 def _load_json(path: Path) -> dict:
@@ -40,17 +41,20 @@ def _load_json(path: Path) -> dict:
         return json.load(f)
 
 
-def load_metrics() -> dict:
+def load_metrics(config: PathConfig | None = None) -> dict:
     """Load system-metrics.json."""
-    return _load_json(CORPUS_DIR / "system-metrics.json")
+    cfg = resolve_path_config(config)
+    return _load_json(cfg.corpus_dir() / "system-metrics.json")
 
 
-def load_essays() -> list[dict]:
+def load_essays(config: PathConfig | None = None) -> list[dict]:
     """List essay files from the corpus."""
-    essays_dir = CORPUS_DIR / "essays"
+    cfg = resolve_path_config(config)
+    corpus_dir = cfg.corpus_dir()
+    essays_dir = corpus_dir / "essays"
     if not essays_dir.is_dir():
         # Try _posts for Jekyll
-        essays_dir = CORPUS_DIR / "_posts"
+        essays_dir = corpus_dir / "_posts"
     if not essays_dir.is_dir():
         return []
 
@@ -60,21 +64,21 @@ def load_essays() -> list[dict]:
         essays.append({
             "file": md.name,
             "title": title,
-            "path": str(md.relative_to(CORPUS_DIR)),
+            "path": str(md.relative_to(corpus_dir)),
         })
     return essays
 
 
-def load_atom_rollups() -> dict[str, dict]:
+def load_atom_rollups(config: PathConfig | None = None) -> dict[str, dict]:
     """Load all per-organ atom rollup JSON files from workspace.
 
     Returns dict mapping organ key → rollup data.
     """
-    from organvm_engine.paths import workspace_root
     from organvm_engine.organ_config import ORGANS
 
     rollups: dict[str, dict] = {}
-    ws = workspace_root()
+    cfg = resolve_path_config(config)
+    ws = cfg.workspace_root()
     for key, info in ORGANS.items():
         rollup_path = ws / info["dir"] / ".atoms" / "organ-rollup.json"
         if rollup_path.exists():
