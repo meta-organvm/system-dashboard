@@ -66,6 +66,15 @@ def _load_pulse_data(config) -> dict:
             outbound_orgs.add(src_org)
             inbound_orgs.add(tgt_org)
 
+    # AMMOI density snapshot (best-effort)
+    ammoi = None
+    try:
+        from organvm_engine.pulse.ammoi import compute_ammoi
+
+        ammoi = compute_ammoi(workspace=workspace, include_events=True)
+    except Exception:
+        pass
+
     return {
         "mood": mood_result,
         "density": dp,
@@ -79,6 +88,7 @@ def _load_pulse_data(config) -> dict:
         "total_nodes": len(graph.nodes),
         "organism_sys_pct": organism.sys_pct,
         "organism_total_repos": organism.total_repos,
+        "ammoi": ammoi,
     }
 
 
@@ -97,6 +107,7 @@ def _fallback_data() -> dict:
         "total_nodes": 0,
         "organism_sys_pct": 0,
         "organism_total_repos": 0,
+        "ammoi": None,
         "error": "Pulse module unavailable",
     }
 
@@ -186,6 +197,7 @@ async def pulse_page(request: Request):
             "total_nodes": data["total_nodes"],
             "event_counts": data["event_counts"],
             "error": data.get("error"),
+        "ammoi": data.get("ammoi"),
         },
     )
 
@@ -205,6 +217,8 @@ async def pulse_api(request: Request):
     density = data["density"]
     nerve = data["nerve"]
 
+    ammoi = data.get("ammoi")
+
     return {
         "mood": mood.to_dict() if mood else None,
         "density": density.to_dict() if density else None,
@@ -222,4 +236,5 @@ async def pulse_api(request: Request):
         "cross_organ_edges": data["cross_organ_edges"],
         "total_edges": data["total_edges"],
         "total_nodes": data["total_nodes"],
+        "ammoi": ammoi.to_dict() if ammoi else None,
     }
