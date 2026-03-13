@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.4jp.organvm.dashboard</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/4jp/Workspace/meta-organvm/.venv/bin/uvicorn</string>
+        <string>dashboard.app:app</string>
+        <string>--host</string>
+        <string>127.0.0.1</string>
+        <string>--port</string>
+        <string>8000</string>
+    </array>
+    <key>WorkingDirectory</key>
+    <string>/Users/4jp/Workspace/meta-organvm/system-dashboard</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/4jp/Workspace/meta-organvm/.venv/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+        <key>ORGANVM_WORKSPACE_DIR</key>
+        <string>/Users/4jp/Workspace</string>
+        <key>ORGANVM_CORPUS_DIR</key>
+        <string>/Users/4jp/Workspace/meta-organvm/organvm-corpvs-testamentvm</string>
+    </dict>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/4jp/System/Logs/organvm-dashboard.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/4jp/System/Logs/organvm-dashboard.log</string>
+</dict>
+</plist>

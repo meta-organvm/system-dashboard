@@ -26,6 +26,7 @@
 <!-- Per-organ summary -->
 <div class="card">
     <h2>Per-Organ Summary</h2>
+    <div class="table-wrap">
     <table>
         <thead>
             <tr>
@@ -50,6 +51,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 
 <!-- Pending tasks by repo -->
@@ -60,6 +62,7 @@
     {% for repo, tasks in o.pending_by_repo.items() %}
     <details style="margin-bottom: 0.5rem;">
         <summary style="cursor: pointer; color: var(--yellow);">{{ repo }} ({{ tasks|length }})</summary>
+        <div class="table-wrap">
         <table style="margin-top: 0.5rem;">
             <thead>
                 <tr><th>ID</th><th>Title</th><th>Status</th></tr>
@@ -77,6 +80,7 @@
             {% endif %}
             </tbody>
         </table>
+        </div>
     </details>
     {% endfor %}
 </div>
@@ -115,6 +119,7 @@
 {% if top_fingerprints %}
 <div class="card">
     <h2>Top Domain Fingerprints</h2>
+    <div class="table-wrap">
     <table>
         <thead>
             <tr><th>Fingerprint</th><th>Count</th></tr>
@@ -128,6 +133,7 @@
         {% endfor %}
         </tbody>
     </table>
+    </div>
 </div>
 {% endif %}
 
@@ -135,6 +141,7 @@
 <div class="card">
     <h2>Pipeline Health</h2>
     {% if manifest %}
+    <div class="table-wrap">
     <table>
         <tbody>
             <tr><td>Last run</td><td>{{ manifest.get('generated', '?')[:19] }}</td></tr>
@@ -149,6 +156,7 @@
             {% endif %}
         </tbody>
     </table>
+    </div>
     {% else %}
     <p style="color: #888;">No pipeline data. Run <code>organvm atoms pipeline --write</code>.</p>
     {% endif %}

@@ -1,0 +1,20 @@
+# Cloudflare Tunnel configuration for organvm-dashboard
+#
+# Setup:
+#   brew install cloudflared
+#   cloudflared tunnel login
+#   cloudflared tunnel create organvm-dashboard
+#   cloudflared tunnel route dns organvm-dashboard dash.ivixivi.xyz
+#
+# Then copy this file to ~/.cloudflared/config.yml and fill in values:
+#   cp infra/cloudflared-config.yml.example ~/.cloudflared/config.yml
+
+tunnel: <tunnel-id>
+credentials-file: /Users/4jp/.cloudflared/<tunnel-id>.json
+
+ingress:
+  - hostname: dash.ivixivi.xyz
+    service: http://localhost:8000
+  - hostname: ssh.ivixivi.xyz
+    service: ssh://localhost:22
+  - service: http_status:404
