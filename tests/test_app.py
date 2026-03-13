@@ -121,6 +121,18 @@ class TestProgressRoutes:
         assert resp.status_code == 404
 
 
+class TestOntologiaRoutes:
+    def test_ontologia_page(self, client):
+        resp = client.get("/ontologia/")
+        assert resp.status_code == 200
+        assert "Ontologia" in resp.text
+
+    def test_ontologia_events(self, client):
+        resp = client.get("/ontologia/events/")
+        assert resp.status_code == 200
+        assert "Ontologia" in resp.text
+
+
 class TestRootRedirect:
     def test_root_redirects(self, client):
         resp = client.get("/", follow_redirects=False)
