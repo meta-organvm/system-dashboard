@@ -160,6 +160,115 @@ async def ontologia_events(request: Request):
     )
 
 
+@router.get("/health/", response_class=HTMLResponse)
+async def ontologia_health_page(request: Request):
+    """System-wide health: sensor alerts, tensions, policy violations."""
+    store = _load_store()
+
+    health_data: dict = {
+        "sensors": {},
+        "tensions": {},
+        "policies": {},
+    }
+
+    try:
+        from organvm_engine.ontologia.sensors import scan_all
+        sensor_results = scan_all()
+        for name, signals in sensor_results.items():
+            health_data["sensors"][name] = len(signals)
+    except Exception:
+        pass
+
+    try:
+        from organvm_engine.ontologia.inference_bridge import detect_tensions
+        health_data["tensions"] = detect_tensions()
+    except Exception:
+        pass
+
+    try:
+        from organvm_engine.ontologia.policies import evaluate_all_policies
+        health_data["policies"] = evaluate_all_policies()
+    except Exception:
+        pass
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="ontologia.html",
+        context={
+            "page_title": "Ontologia — Health",
+            "available": store is not None,
+            "entity_count": store.entity_count if store else 0,
+            "counts_by_type": _count_by_type(store) if store else {},
+            "counts_by_status": _count_by_status(store) if store else {},
+            "entities": [],
+            "events": [],
+            "detail": None,
+            "health": health_data,
+        },
+    )
+
+
+@router.get("/health/{uid}", response_class=HTMLResponse)
+async def ontologia_entity_health(request: Request, uid: str):
+    """Per-entity health detail."""
+    store = _load_store()
+    health_data: dict = {}
+
+    try:
+        from organvm_engine.ontologia.inference_bridge import infer_health
+        health_data = infer_health(entity_query=uid)
+    except Exception:
+        health_data = {"error": "Cannot compute health"}
+
+    entity = store.get_entity(uid) if store else None
+    name_rec = store.current_name(uid) if store and entity else None
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="ontologia.html",
+        context={
+            "page_title": f"Ontologia — Health: {name_rec.display_name if name_rec else uid}",
+            "available": store is not None,
+            "entity_count": store.entity_count if store else 0,
+            "counts_by_type": _count_by_type(store) if store else {},
+            "counts_by_status": _count_by_status(store) if store else {},
+            "entities": [],
+            "events": [],
+            "detail": None,
+            "health": health_data,
+        },
+    )
+
+
+@router.get("/revisions/", response_class=HTMLResponse)
+async def ontologia_revisions_page(request: Request):
+    """Revision log browser."""
+    store = _load_store()
+    revisions: list[dict] = []
+
+    try:
+        from organvm_engine.ontologia.policies import load_revisions
+        revisions = load_revisions(limit=100)
+    except Exception:
+        pass
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="ontologia.html",
+        context={
+            "page_title": "Ontologia — Revisions",
+            "available": store is not None,
+            "entity_count": store.entity_count if store else 0,
+            "counts_by_type": _count_by_type(store) if store else {},
+            "counts_by_status": _count_by_status(store) if store else {},
+            "entities": [],
+            "events": [],
+            "detail": None,
+            "revisions": revisions,
+        },
+    )
+
+
 @router.get("/{uid}", response_class=HTMLResponse)
 async def ontologia_detail(request: Request, uid: str):
     """Entity detail view with name history."""
