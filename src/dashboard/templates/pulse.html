@@ -35,6 +35,79 @@
 </div>
 {% endif %}
 
+<!-- AMMOI Density Card -->
+{% if ammoi %}
+<div class="card" style="border-color: var(--yellow); margin-bottom: 1.5rem;">
+    <h2 style="color: var(--yellow);">AMMOI — System Density</h2>
+    <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 1rem;">
+        <div style="text-align: center;">
+            <div style="font-size: 3.5rem; font-weight: bold; color: var(--yellow); line-height: 1;">
+                {{ (ammoi.system_density * 100)|round(1) }}%
+            </div>
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: #888; letter-spacing: 0.1em;">System Density</div>
+        </div>
+        <div style="display: flex; gap: 1.5rem; flex-wrap: wrap;">
+            <div><div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">Entities</div><div style="font-size: 1.3rem;">{{ ammoi.total_entities }}</div></div>
+            <div><div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">Edges</div><div style="font-size: 1.3rem;">{{ ammoi.active_edges }}</div></div>
+            <div><div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">Events 24h</div><div style="font-size: 1.3rem;">{{ ammoi.event_frequency_24h }}</div></div>
+            <div><div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">Pulse #</div><div style="font-size: 1.3rem;">{{ ammoi.pulse_count }}</div></div>
+        </div>
+    </div>
+
+    <!-- Temporal Deltas -->
+    {% if ammoi.density_delta_24h or ammoi.density_delta_7d or ammoi.density_delta_30d %}
+    <div style="display: flex; gap: 2rem; margin-bottom: 1rem; border-top: 1px solid var(--border); padding-top: 0.75rem;">
+        {% if ammoi.density_delta_24h %}
+        <div>
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">&#916;24h</div>
+            <div style="font-size: 1.1rem; color: {% if ammoi.density_delta_24h > 0 %}var(--pass){% elif ammoi.density_delta_24h < 0 %}var(--fail){% else %}var(--white){% endif %};">
+                {% if ammoi.density_delta_24h > 0 %}+{% endif %}{{ (ammoi.density_delta_24h * 100)|round(1) }}%
+            </div>
+        </div>
+        {% endif %}
+        {% if ammoi.density_delta_7d %}
+        <div>
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">&#916;7d</div>
+            <div style="font-size: 1.1rem; color: {% if ammoi.density_delta_7d > 0 %}var(--pass){% elif ammoi.density_delta_7d < 0 %}var(--fail){% else %}var(--white){% endif %};">
+                {% if ammoi.density_delta_7d > 0 %}+{% endif %}{{ (ammoi.density_delta_7d * 100)|round(1) }}%
+            </div>
+        </div>
+        {% endif %}
+        {% if ammoi.density_delta_30d %}
+        <div>
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">&#916;30d</div>
+            <div style="font-size: 1.1rem; color: {% if ammoi.density_delta_30d > 0 %}var(--pass){% elif ammoi.density_delta_30d < 0 %}var(--fail){% else %}var(--white){% endif %};">
+                {% if ammoi.density_delta_30d > 0 %}+{% endif %}{{ (ammoi.density_delta_30d * 100)|round(1) }}%
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Per-Organ Density Heatmap -->
+    {% if ammoi.organs %}
+    <div style="border-top: 1px solid var(--border); padding-top: 0.75rem;">
+        <div style="font-size: 0.75rem; text-transform: uppercase; color: #666; margin-bottom: 0.5rem; letter-spacing: 0.1em;">Organ Density</div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            {% for oid, od in ammoi.organs.items()|sort(attribute='1.density', reverse=true) %}
+            <div style="border: 1px solid var(--border); padding: 0.5rem 0.75rem; min-width: 7rem; text-align: center;
+                background: rgba({% if od.density >= 0.6 %}0, 255, 136{% elif od.density >= 0.3 %}255, 255, 0{% else %}255, 68, 68{% endif %}, {{ (od.density * 0.15)|round(2) }});">
+                <div style="font-size: 0.65rem; text-transform: uppercase; color: #888; white-space: nowrap;">{{ oid }}</div>
+                <div style="font-size: 1.3rem; font-weight: bold;">{{ (od.density * 100)|round(0)|int }}%</div>
+                <div style="font-size: 0.65rem; color: #666;">{{ od.repo_count }} repos</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Compressed Text -->
+    {% if ammoi.compressed_text %}
+    <div style="margin-top: 0.75rem; font-size: 0.75rem; color: #666; font-style: italic;">{{ ammoi.compressed_text }}</div>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Metrics Row -->
 <div style="display: flex; flex-wrap: wrap;">
     {% if density %}

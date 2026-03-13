@@ -238,3 +238,50 @@ async def pulse_api(request: Request):
         "total_nodes": data["total_nodes"],
         "ammoi": ammoi.to_dict() if ammoi else None,
     }
+
+
+@router.get("/events", response_class=HTMLResponse)
+async def pulse_events(request: Request):
+    """HTMX partial returning the recent events table rows."""
+    config = request.app.state.path_config
+
+    try:
+        from organvm_engine.pulse.events import recent
+
+        events = recent(20)
+    except Exception:
+        events = []
+
+    rows: list[dict] = []
+    for evt in events:
+        ts = evt.timestamp[:19] if len(evt.timestamp) >= 19 else evt.timestamp
+        rows.append({
+            "timestamp": ts,
+            "event_type": evt.event_type,
+            "source": evt.source,
+        })
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="pulse_events_partial.html",
+        context={"event_rows": rows},
+    )
+
+
+@router.get("/history")
+async def pulse_history(request: Request):
+    """JSON endpoint returning AMMOI history for temporal charts."""
+    days = int(request.query_params.get("days", "30"))
+
+    try:
+        from organvm_engine.pulse.rhythm import pulse_history as get_history
+
+        snapshots = get_history(days=days)
+    except Exception:
+        snapshots = []
+
+    return {
+        "days": days,
+        "count": len(snapshots),
+        "snapshots": snapshots,
+    }
