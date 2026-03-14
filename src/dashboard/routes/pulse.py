@@ -75,6 +75,54 @@ def _load_pulse_data(config) -> dict:
     except Exception:
         pass
 
+    # Inference tensions + advisories (best-effort)
+    inference = None
+    try:
+        from organvm_engine.pulse.inference_bridge import run_inference
+
+        inference = run_inference(workspace)
+    except Exception:
+        pass
+
+    # Structural edges from ontologia (best-effort)
+    edge_summary = {"hierarchy": 0, "relations": 0, "cross_organ": 0, "by_type": {}}
+    try:
+        from ontologia.registry.store import open_store as _edge_open_store
+
+        _edge_store = _edge_open_store()
+        _ei = _edge_store.edge_index
+        _h_edges = [e for e in _ei.all_hierarchy_edges() if e.is_active()]
+        _r_edges = [e for e in _ei.all_relation_edges() if e.is_active()]
+        _by_type: dict[str, int] = {}
+        for _e in _r_edges:
+            _by_type[_e.relation_type] = _by_type.get(_e.relation_type, 0) + 1
+
+        # Cross-organ via hierarchy parent mapping
+        _c2o: dict[str, str] = {}
+        for _e in _h_edges:
+            _c2o[_e.child_id] = _e.parent_id
+        _cross = sum(
+            1 for _e in _r_edges
+            if _c2o.get(_e.source_id, "") and _c2o.get(_e.target_id, "")
+            and _c2o[_e.source_id] != _c2o[_e.target_id]
+        )
+        edge_summary = {
+            "hierarchy": len(_h_edges),
+            "relations": len(_r_edges),
+            "cross_organ": _cross,
+            "by_type": _by_type,
+        }
+    except Exception:
+        pass
+
+    advisories_list = []
+    try:
+        from organvm_engine.pulse.advisories import read_advisories
+
+        advisories_list = read_advisories(limit=10, unacked_only=True)
+    except Exception:
+        pass
+
     return {
         "mood": mood_result,
         "density": dp,
@@ -89,6 +137,9 @@ def _load_pulse_data(config) -> dict:
         "organism_sys_pct": organism.sys_pct,
         "organism_total_repos": organism.total_repos,
         "ammoi": ammoi,
+        "inference": inference,
+        "advisories": advisories_list,
+        "edge_summary": edge_summary,
     }
 
 
@@ -180,6 +231,28 @@ async def pulse_page(request: Request):
             },
         ]
 
+    # Build tension rows
+    inference = data.get("inference")
+    tension_rows: list[dict] = []
+    if inference is not None:
+        for t in inference.tensions:
+            tension_rows.append({
+                "type": t.get("type", "unknown"),
+                "severity": t.get("severity", 0.0),
+                "description": t.get("description", ""),
+            })
+
+    # Build advisory rows
+    advisory_rows: list[dict] = []
+    for adv in data.get("advisories", []):
+        advisory_rows.append({
+            "id": adv.advisory_id,
+            "severity": adv.severity,
+            "action": adv.action,
+            "entity": adv.entity_name,
+            "description": adv.description,
+        })
+
     return request.app.state.templates.TemplateResponse(
         request,
         name="pulse.html",
@@ -197,7 +270,13 @@ async def pulse_page(request: Request):
             "total_nodes": data["total_nodes"],
             "event_counts": data["event_counts"],
             "error": data.get("error"),
-        "ammoi": data.get("ammoi"),
+            "ammoi": data.get("ammoi"),
+            "tension_rows": tension_rows,
+            "advisory_rows": advisory_rows,
+            "inference_score": inference.inference_score if inference else 0.0,
+            "tension_count": inference.tension_count if inference else 0,
+            "cluster_count": inference.cluster_count if inference else 0,
+            "edge_summary": data.get("edge_summary", {}),
         },
     )
 
@@ -237,6 +316,9 @@ async def pulse_api(request: Request):
         "total_edges": data["total_edges"],
         "total_nodes": data["total_nodes"],
         "ammoi": ammoi.to_dict() if ammoi else None,
+        "inference": data.get("inference").to_dict() if data.get("inference") else None,
+        "advisories": [a.to_dict() for a in data.get("advisories", [])],
+        "edge_summary": data.get("edge_summary", {}),
     }
 
 

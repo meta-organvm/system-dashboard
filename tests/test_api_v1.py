@@ -150,7 +150,6 @@ class TestSeedsEndpoint:
 
 
 class TestEdgesEndpoint:
-    @pytest.mark.xfail(reason="upstream bug in organvm_mcp.tools.seeds.find_edges")
     def test_edges_default(self, client):
         resp = client.get("/api/v1/edges")
         assert resp.status_code == 200

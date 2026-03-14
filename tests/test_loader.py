@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import dashboard.data.loader as loader_mod
+from organvm_engine.paths import PathConfig
 
 
 class TestLoadRegistry:
@@ -50,51 +51,51 @@ class TestLoadGovernanceRules:
 
 
 class TestLoadMetrics:
-    def test_missing_file(self, monkeypatch):
-        monkeypatch.setattr(loader_mod, "CORPUS_DIR", Path("/nonexistent"))
-        result = loader_mod.load_metrics()
+    def test_missing_file(self):
+        config = PathConfig(corpus_root=Path("/nonexistent"))
+        result = loader_mod.load_metrics(config)
         assert result == {}
 
-    def test_with_file(self, tmp_path, monkeypatch):
+    def test_with_file(self, tmp_path):
         metrics_file = tmp_path / "system-metrics.json"
         metrics_file.write_text(json.dumps({"total_repos": 100}))
-        monkeypatch.setattr(loader_mod, "CORPUS_DIR", tmp_path)
-        result = loader_mod.load_metrics()
+        config = PathConfig(corpus_root=tmp_path)
+        result = loader_mod.load_metrics(config)
         assert result == {"total_repos": 100}
 
 
 class TestLoadEssays:
-    def test_no_dir(self, monkeypatch):
-        monkeypatch.setattr(loader_mod, "CORPUS_DIR", Path("/nonexistent"))
-        result = loader_mod.load_essays()
+    def test_no_dir(self):
+        config = PathConfig(corpus_root=Path("/nonexistent"))
+        result = loader_mod.load_essays(config)
         assert result == []
 
-    def test_with_essays_dir(self, tmp_path, monkeypatch):
+    def test_with_essays_dir(self, tmp_path):
         essays_dir = tmp_path / "essays"
         essays_dir.mkdir()
         (essays_dir / "test-essay.md").write_text("# Test")
         (essays_dir / "another-one.md").write_text("# Another")
-        monkeypatch.setattr(loader_mod, "CORPUS_DIR", tmp_path)
-        result = loader_mod.load_essays()
+        config = PathConfig(corpus_root=tmp_path)
+        result = loader_mod.load_essays(config)
         assert len(result) == 2
         assert any(e["file"] == "test-essay.md" for e in result)
         assert any(e["file"] == "another-one.md" for e in result)
 
-    def test_falls_back_to_posts(self, tmp_path, monkeypatch):
+    def test_falls_back_to_posts(self, tmp_path):
         posts_dir = tmp_path / "_posts"
         posts_dir.mkdir()
         (posts_dir / "post.md").write_text("# Post")
-        monkeypatch.setattr(loader_mod, "CORPUS_DIR", tmp_path)
-        result = loader_mod.load_essays()
+        config = PathConfig(corpus_root=tmp_path)
+        result = loader_mod.load_essays(config)
         assert len(result) == 1
         assert result[0]["file"] == "post.md"
 
-    def test_essay_structure(self, tmp_path, monkeypatch):
+    def test_essay_structure(self, tmp_path):
         essays_dir = tmp_path / "essays"
         essays_dir.mkdir()
         (essays_dir / "my-great-essay.md").write_text("# Content")
-        monkeypatch.setattr(loader_mod, "CORPUS_DIR", tmp_path)
-        result = loader_mod.load_essays()
+        config = PathConfig(corpus_root=tmp_path)
+        result = loader_mod.load_essays(config)
         essay = result[0]
         assert "file" in essay
         assert "title" in essay
@@ -102,13 +103,13 @@ class TestLoadEssays:
         assert essay["file"] == "my-great-essay.md"
         assert essay["title"] == "My Great Essay"
 
-    def test_ignores_non_md(self, tmp_path, monkeypatch):
+    def test_ignores_non_md(self, tmp_path):
         essays_dir = tmp_path / "essays"
         essays_dir.mkdir()
         (essays_dir / "readme.txt").write_text("not markdown")
         (essays_dir / "real.md").write_text("# Real")
-        monkeypatch.setattr(loader_mod, "CORPUS_DIR", tmp_path)
-        result = loader_mod.load_essays()
+        config = PathConfig(corpus_root=tmp_path)
+        result = loader_mod.load_essays(config)
         assert len(result) == 1
         assert result[0]["file"] == "real.md"
 
