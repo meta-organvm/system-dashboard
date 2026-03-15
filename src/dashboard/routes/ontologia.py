@@ -269,6 +269,107 @@ async def ontologia_revisions_page(request: Request):
     )
 
 
+@router.get("/variables/", response_class=HTMLResponse)
+async def ontologia_variables(request: Request):
+    """Variable store browser — all scoped variables with entity resolution."""
+    store = _load_store()
+
+    if store is None:
+        return request.app.state.templates.TemplateResponse(
+            request,
+            name="ontologia_variables.html",
+            context={
+                "page_title": "Ontologia — Variables",
+                "available": False,
+                "variables": [],
+                "total_count": 0,
+                "scope_counts": {},
+            },
+        )
+
+    from ontologia.variables.variable import SCOPE_ORDER
+
+    rows: list[dict] = []
+    scope_counts: dict[str, int] = {}
+    for scope in SCOPE_ORDER:
+        vars_at_scope = store.variable_store.list_at_scope(scope)
+        scope_counts[scope.value] = len(vars_at_scope)
+        for var in sorted(vars_at_scope, key=lambda v: v.key):
+            entity_display = ""
+            if var.entity_id:
+                name_rec = store.current_name(var.entity_id)
+                entity_display = name_rec.display_name if name_rec else var.entity_id
+            updated = var.updated_at[:19] if var.updated_at and len(var.updated_at) >= 19 else var.updated_at
+            rows.append({
+                "key": var.key,
+                "value": str(var.value),
+                "scope": var.scope.value,
+                "entity": entity_display,
+                "entity_id": var.entity_id or "",
+                "var_type": var.var_type.value,
+                "mutability": var.mutability.value,
+                "updated": updated,
+            })
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="ontologia_variables.html",
+        context={
+            "page_title": "Ontologia — Variables",
+            "available": True,
+            "variables": rows,
+            "total_count": len(rows),
+            "scope_counts": scope_counts,
+        },
+    )
+
+
+@router.get("/metrics/", response_class=HTMLResponse)
+async def ontologia_metrics(request: Request):
+    """Metric definition browser with latest observations."""
+    store = _load_store()
+
+    if store is None:
+        return request.app.state.templates.TemplateResponse(
+            request,
+            name="ontologia_metrics.html",
+            context={
+                "page_title": "Ontologia — Metrics",
+                "available": False,
+                "metrics": [],
+                "total_count": 0,
+                "observation_count": 0,
+            },
+        )
+
+    metric_defs = store.list_metrics()
+    rows: list[dict] = []
+    for met in sorted(metric_defs, key=lambda m: m.name):
+        obs = store.observation_store.latest(met.metric_id, "system")
+        rows.append({
+            "metric_id": met.metric_id,
+            "name": met.name,
+            "metric_type": met.metric_type.value,
+            "unit": met.unit,
+            "aggregation": met.aggregation.value,
+            "latest_value": str(obs.value) if obs else "",
+            "latest_timestamp": (obs.timestamp[:19] if obs and len(obs.timestamp) >= 19 else obs.timestamp) if obs else "",
+            "latest_source": obs.source if obs else "",
+        })
+
+    return request.app.state.templates.TemplateResponse(
+        request,
+        name="ontologia_metrics.html",
+        context={
+            "page_title": "Ontologia — Metrics",
+            "available": True,
+            "metrics": rows,
+            "total_count": len(rows),
+            "observation_count": store.observation_store.count,
+        },
+    )
+
+
 @router.get("/{uid}", response_class=HTMLResponse)
 async def ontologia_detail(request: Request, uid: str):
     """Entity detail view with name history."""
