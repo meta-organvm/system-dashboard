@@ -108,6 +108,70 @@
 </div>
 {% endif %}
 
+<!-- Temporal Intelligence Card -->
+{% if temporal %}
+<div class="card" style="border-color: var(--cyan); margin-bottom: 1.5rem;">
+    <h2 style="color: var(--cyan);">Temporal Intelligence</h2>
+    <div style="display: flex; align-items: center; gap: 2rem; margin-bottom: 1rem;">
+        <div style="text-align: center;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: var(--cyan); line-height: 1; text-transform: uppercase;">
+                {{ temporal.dominant_trend }}
+            </div>
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: #888; letter-spacing: 0.1em;">Dominant Trend</div>
+        </div>
+        <div>
+            <div style="font-size: 0.7rem; text-transform: uppercase; color: #666;">Momentum</div>
+            <div style="font-size: 1.3rem;">{{ temporal.total_momentum|round(3) }}</div>
+        </div>
+    </div>
+
+    <!-- Density Sparkline -->
+    {% if density_sparkline_svg %}
+    <div style="border-top: 1px solid var(--border); padding-top: 0.75rem; margin-bottom: 0.75rem;">
+        <div style="font-size: 0.75rem; text-transform: uppercase; color: #666; margin-bottom: 0.5rem; letter-spacing: 0.1em;">Density History</div>
+        {{ density_sparkline_svg|safe }}
+    </div>
+    {% endif %}
+
+    <!-- Per-Metric Table -->
+    {% if temporal.metrics %}
+    <div style="border-top: 1px solid var(--border); padding-top: 0.75rem;">
+        <div style="font-size: 0.75rem; text-transform: uppercase; color: #666; margin-bottom: 0.5rem; letter-spacing: 0.1em;">Metric Velocities</div>
+        <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th style="text-align: right;">Current</th>
+                    <th style="text-align: right;">Velocity</th>
+                    <th style="text-align: right;">Accel.</th>
+                    <th>Trend</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in temporal.metrics %}
+                <tr>
+                    <td>{{ m.name }}</td>
+                    <td style="text-align: right;">{{ m.current|round(2) }}</td>
+                    <td style="text-align: right; color: {% if m.velocity > 0 %}var(--pass){% elif m.velocity < 0 %}var(--fail){% else %}#888{% endif %};">
+                        {% if m.velocity > 0 %}+{% endif %}{{ m.velocity|round(4) }}
+                    </td>
+                    <td style="text-align: right;">{{ m.acceleration|round(4) }}</td>
+                    <td>
+                        <span class="badge" style="border-color: {% if m.trend in ['rising', 'accelerating'] %}var(--pass){% elif m.trend in ['falling', 'decelerating'] %}var(--fail){% else %}#666{% endif %}; color: {% if m.trend in ['rising', 'accelerating'] %}var(--pass){% elif m.trend in ['falling', 'decelerating'] %}var(--fail){% else %}#888{% endif %};">
+                            {{ m.trend }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
 <!-- Metrics Row -->
 <div style="display: flex; flex-wrap: wrap;">
     {% if density %}

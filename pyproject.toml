@@ -24,5 +24,9 @@ dev = ["pytest", "httpx", "ruff>=0.4"]
 [project.scripts]
 organvm-dashboard = "dashboard.app:main"
 
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+
 [tool.setuptools.packages.find]
 where = ["src"]

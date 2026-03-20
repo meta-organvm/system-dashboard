@@ -9,21 +9,22 @@ from fastapi.responses import HTMLResponse
 
 try:
     from ontologia.entity.identity import EntityType, LifecycleStatus
-    from ontologia.registry.store import open_store
+    from ontologia.registry.store import open_store as _open_store
 
     HAS_ONTOLOGIA = True
 except ImportError:
     HAS_ONTOLOGIA = False
+    _open_store = None  # type: ignore[assignment]
 
 router = APIRouter(prefix="/ontologia", tags=["ontologia"])
 
 
 def _load_store():
     """Open the ontologia store, returning None if unavailable."""
-    if not HAS_ONTOLOGIA:
+    if not HAS_ONTOLOGIA or _open_store is None:
         return None
     try:
-        return open_store()
+        return _open_store()
     except Exception:
         return None
 
@@ -425,9 +426,9 @@ async def ontologia_detail(request: Request, uid: str):
             {
                 "display_name": nr.display_name,
                 "is_primary": nr.is_primary,
-                "recorded_at": nr.recorded_at[:19] if len(nr.recorded_at) >= 19 else nr.recorded_at,
+                "recorded_at": nr.valid_from[:19] if len(nr.valid_from) >= 19 else nr.valid_from,
                 "source": nr.source,
-                "retired_at": nr.retired_at[:19] if nr.retired_at and len(nr.retired_at) >= 19 else nr.retired_at,
+                "retired_at": nr.valid_to[:19] if nr.valid_to and len(nr.valid_to) >= 19 else nr.valid_to,
             }
             for nr in name_history
         ],

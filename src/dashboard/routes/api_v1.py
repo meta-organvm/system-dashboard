@@ -52,7 +52,7 @@ async def api_organism(
     """Organism view (CLI: organvm organism)."""
     from organvm_mcp.tools.health import organism
 
-    return organism(organ=organ, repo=repo, view=view)
+    return organism(organ=organ, repo=repo, view=view or "full")
 
 
 @router.get("/omega", response_model=None)

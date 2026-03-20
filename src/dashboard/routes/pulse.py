@@ -8,6 +8,30 @@ from fastapi.responses import HTMLResponse
 router = APIRouter(prefix="/pulse", tags=["pulse"])
 
 
+def _sparkline_svg(values: list[float], width: int = 200, height: int = 40) -> str:
+    """Generate an inline SVG sparkline polyline from a list of floats."""
+    if not values or len(values) < 2:
+        return ""
+    lo = min(values)
+    hi = max(values)
+    span = hi - lo if hi > lo else 1.0
+
+    points: list[str] = []
+    for i, v in enumerate(values):
+        x = round(i / (len(values) - 1) * width, 1)
+        y = round(height - (v - lo) / span * height, 1)
+        points.append(f"{x},{y}")
+
+    polyline = " ".join(points)
+    return (
+        f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+        f'xmlns="http://www.w3.org/2000/svg">'
+        f'<polyline points="{polyline}" fill="none" stroke="#00F" '
+        f'stroke-width="2" stroke-linejoin="round"/>'
+        f"</svg>"
+    )
+
+
 def _load_pulse_data(config) -> dict:
     """Compute all pulse data from organvm-engine.
 
@@ -123,6 +147,22 @@ def _load_pulse_data(config) -> dict:
     except Exception:
         pass
 
+    # Temporal profile from AMMOI history (best-effort)
+    temporal_data: dict | None = None
+    density_sparkline: list[float] = []
+    try:
+        from organvm_engine.pulse.ammoi import _read_history, extract_timeseries
+        from organvm_engine.pulse.temporal import compute_temporal_profile
+
+        history = _read_history(limit=50)
+        if len(history) >= 3:
+            timeseries = extract_timeseries(history)
+            profile = compute_temporal_profile(timeseries)
+            temporal_data = profile.to_dict()
+            density_sparkline = timeseries.get("system_density", [])
+    except Exception:
+        pass
+
     return {
         "mood": mood_result,
         "density": dp,
@@ -140,6 +180,8 @@ def _load_pulse_data(config) -> dict:
         "inference": inference,
         "advisories": advisories_list,
         "edge_summary": edge_summary,
+        "temporal": temporal_data,
+        "density_sparkline": density_sparkline,
     }
 
 
@@ -277,6 +319,8 @@ async def pulse_page(request: Request):
             "tension_count": inference.tension_count if inference else 0,
             "cluster_count": inference.cluster_count if inference else 0,
             "edge_summary": data.get("edge_summary", {}),
+            "temporal": data.get("temporal"),
+            "density_sparkline_svg": _sparkline_svg(data.get("density_sparkline", [])),
         },
     )
 
@@ -316,9 +360,10 @@ async def pulse_api(request: Request):
         "total_edges": data["total_edges"],
         "total_nodes": data["total_nodes"],
         "ammoi": ammoi.to_dict() if ammoi else None,
-        "inference": data.get("inference").to_dict() if data.get("inference") else None,
+        "inference": data["inference"].to_dict() if data.get("inference") is not None else None,
         "advisories": [a.to_dict() for a in data.get("advisories", [])],
         "edge_summary": data.get("edge_summary", {}),
+        "temporal": data.get("temporal"),
     }
 
 

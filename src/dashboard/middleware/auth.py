@@ -9,10 +9,11 @@ Three auth strategies that stack (first match wins):
 from __future__ import annotations
 
 import os
-from typing import Any
+from typing import Any, cast
 
 import httpx
 import jwt
+from jwt.algorithms import RSAAlgorithm
 from fastapi import HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
 
@@ -56,7 +57,8 @@ def _verify_cf_jwt(token: str, team_domain: str, audience: str) -> dict[str, Any
 
         for key_data in _cf_public_keys:
             if key_data.get("kid") == kid:
-                public_key = jwt.algorithms.RSAAlgorithm.from_jwk(key_data)
+                # CF Access JWKs are always public keys; cast for pyright
+                public_key = cast(Any, RSAAlgorithm.from_jwk(key_data))
                 return jwt.decode(
                     token,
                     public_key,
