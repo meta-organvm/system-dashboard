@@ -155,6 +155,21 @@ class TestNetworkPage:
         assert "maps_count" in data
 
 
+class TestTriviumRoutes:
+    def test_trivium_page(self, client):
+        resp = client.get("/trivium/")
+        assert resp.status_code == 200
+        assert "Dialectica Universalis" in resp.text
+
+    def test_trivium_page_has_dialects(self, client):
+        resp = client.get("/trivium/")
+        assert "FORMAL_LOGIC" in resp.text or "formal_logic" in resp.text
+
+    def test_trivium_page_has_tiers(self, client):
+        resp = client.get("/trivium/")
+        assert "FORMAL" in resp.text or "formal" in resp.text
+
+
 class TestRootRedirect:
     def test_root_redirects(self, client):
         resp = client.get("/", follow_redirects=False)
