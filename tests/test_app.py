@@ -140,6 +140,21 @@ class TestContentRoutes:
         assert "Content Pipeline" in resp.text
 
 
+class TestNetworkPage:
+    def test_network_page(self, client):
+        resp = client.get("/network/")
+        assert resp.status_code == 200
+        assert "Network Testament" in resp.text
+
+    def test_network_api(self, client):
+        resp = client.get("/network/api")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "density" in data
+        assert "coverage" in data
+        assert "maps_count" in data
+
+
 class TestRootRedirect:
     def test_root_redirects(self, client):
         resp = client.get("/", follow_redirects=False)

@@ -21,7 +21,21 @@ def _load_network_data(config):
     from organvm_engine.network.ledger import ledger_summary
     from organvm_engine.network.query import organ_density
 
-    workspace = config.workspace
+    workspace = config.workspace_dir
+    if not workspace or not workspace.is_dir():
+        return {
+            "maps": [],
+            "maps_count": 0,
+            "total_mirrors": 0,
+            "density": 0.0,
+            "coverage": {"technical": 0.0, "parallel": 0.0, "kinship": 0.0},
+            "convergences": {},
+            "organ_density": {},
+            "ledger_summary": {"total_actions": 0, "unique_projects": 0,
+                               "by_lens": {}, "by_form": {}, "by_repo": {},
+                               "earliest": None, "latest": None},
+        }
+
     pairs = discover_network_maps(workspace)
     maps = [m for _, m in pairs]
 
@@ -34,7 +48,7 @@ def _load_network_data(config):
         "maps": maps,
         "maps_count": len(maps),
         "total_mirrors": sum(m.mirror_count for m in maps),
-        "density": network_density(maps, 76),
+        "density": network_density(maps, max(len(maps), 1)),
         "coverage": coverage,
         "convergences": convergences,
         "organ_density": density_by_organ,
