@@ -133,6 +133,13 @@ class TestOntologiaRoutes:
         assert "Ontologia" in resp.text
 
 
+class TestContentRoutes:
+    def test_content_page(self, client):
+        resp = client.get("/content/")
+        assert resp.status_code == 200
+        assert "Content Pipeline" in resp.text
+
+
 class TestRootRedirect:
     def test_root_redirects(self, client):
         resp = client.get("/", follow_redirects=False)

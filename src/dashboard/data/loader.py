@@ -90,6 +90,27 @@ def load_atom_rollups(config: PathConfig | None = None) -> dict[str, dict]:
     return rollups
 
 
+def load_content_data(config: PathConfig | None = None) -> dict:
+    """Load content posts and cadence report in one pass."""
+    import dataclasses
+
+    from organvm_engine.content.cadence import check_cadence
+    from organvm_engine.content.reader import discover_posts
+
+    cfg = resolve_path_config(config)
+    content_path = cfg.content_dir()
+    if not content_path.is_dir():
+        return {"posts": [], "cadence": {}}
+
+    posts = discover_posts(content_path)
+    cadence = check_cadence(posts)
+
+    return {
+        "posts": [dataclasses.asdict(p) for p in posts],
+        "cadence": dataclasses.asdict(cadence),
+    }
+
+
 def organ_summary(registry: dict) -> list[dict]:
     """Build per-organ summary for display."""
     organs = registry.get("organs", {})
