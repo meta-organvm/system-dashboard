@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 
 from organvm_engine.paths import PathConfig, resolve_path_config
 
-from dashboard.routes import health, registry, graph, soak, essays, omega, progress, atoms, ecosystem, pulse, ontologia, content, testament, network, trivium
+from dashboard.routes import health, registry, graph, soak, essays, omega, progress, atoms, ecosystem, pulse, ontologia, content, testament, network, trivium, irf
 from dashboard.routes import api_v1
 
 APP_DIR = Path(__file__).resolve().parent
@@ -44,6 +44,7 @@ def create_app(config: PathConfig | None = None) -> FastAPI:
     app.include_router(testament.router)
     app.include_router(network.router)
     app.include_router(trivium.router)
+    app.include_router(irf.router)
     app.include_router(api_v1.router)
 
     @app.get("/")
